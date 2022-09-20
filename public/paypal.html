@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link rel="stylesheet" href="checkout.css" />
+  </head>
+  <body>
+    <!-- Replace "test" with your own sandbox Business account app client ID -->
+    <script>
+      const clientId = "Adgg9gjKMrvsJlgZfJekx3It4_cHxUnyZabxGv6ULBJazoBF5zIf-Szycp_EVrI2qM0V4Gel7lO7KL55"
+      const queryString = window.location.search;
+      console.log(queryString);
+      const urlParams = new URLSearchParams(queryString);
+      const credit = urlParams.get('credit');
+      const method = urlParams.get('method');
+      var script = document.createElement('script');
+
+      if(method == 1){
+        script.src = `https://www.paypal.com/sdk/js?client-id=${clientId}&currency=GBP`;
+      } else{
+        script.src=`https://www.paypal.com/sdk/js?client-id=${clientId}&vault=true&intent=subscription`;
+      }
+      document.head.appendChild(script);
+    </script>
+    <!-- Set up a container element for the button -->
+    <div id="paypal-button-container"></div>
+    <div id="stripe-containter">
+      <form action="/create-checkout-session" method="POST">
+        <input type="hidden" id="credit" name="credit">
+        <input type="hidden" id="method" name="method">
+        <button id="basic-plan-btn">Pay Via Stripe</button>
+      </form>
+    </div>
+    <script>
+      
+      const creditInput = document.querySelector('#credit');
+      creditInput.value = credit;
+      console.log(creditInput)
+      const methodInput = document.querySelector('#method');
+      methodInput.value = method;
+
+      script.onload = function() {
+        if(method == 1){
+          paypal.Buttons({
+            // Sets up the transaction when a payment button is clicked
+            createOrder: (data, actions) => {
+              return actions.order.create({
+                purchase_units: [{
+                  amount: {
+                    value: `${credit*5}` // Can also reference a variable or function
+                  }
+                }]
+              });
+            },
+            // Finalize the transaction after payer approval
+            onApprove: (data, actions) => {
+              return actions.order.capture().then(function(orderData) {
+                // Successful capture! For dev/demo purposes:
+                console.log('Capture result', orderData, JSON.stringify(orderData, null, 2));
+                const transaction = orderData.purchase_units[0].payments.captures[0];
+                alert(`Transaction ${transaction.status}: ${transaction.id}\n\nSee console for all available details`);
+                // When ready to go live, remove the alert and show a success message within this page. For example:
+                // const element = document.getElementById('paypal-button-container');
+                // element.innerHTML = '<h3>Thank you for your payment!</h3>';
+                // Or go to another URL:  actions.redirect('thank_you.html');
+              });
+            }
+          }).render('#paypal-button-container');
+        } else {
+          paypal.Buttons({
+            style: {
+                shape: 'rect',
+                color: 'gold',
+                layout: 'vertical',
+                label: 'subscribe'
+            },
+            createSubscription: function(data, actions) {
+              return actions.subscription.create({
+                /* Creates the subscription */
+                plan_id: 'P-9KU655887H538353YMMUWU5Q'
+              });
+            },
+            onApprove: function(data, actions) {
+              alert(data.subscriptionID); // You can add optional success message for the subscriber here
+            }
+        }).render('#paypal-button-container');            
+        }
+      };
+      
+    </script>
+  </body>
+</html>
